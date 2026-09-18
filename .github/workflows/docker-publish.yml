@@ -18,33 +18,48 @@ jobs:
       - name: Checkout do Código
         uses: actions/checkout@v4
 
-      # 🚀 Resgata o pacote de forma dinâmica e tolera variações de caixa alta/baixa no nome
+      # 🚀 Resgata TODOS os pacotes presentes (Linux .tar.gz, Windows .zip,
+      # macOS .dmg) de forma dinâmica, tolerando variação de caixa no nome e
+      # qualquer subconjunto de SOs disponível -- só a build Linux é
+      # obrigatória, as outras entram se existirem.
       - name: Resgatar WebAgent Proprietário no Workspace
         run: |
           echo "🔍 Procurando arquivos do WebAgent nos caminhos conhecidos..."
 
           shopt -s nullglob
 
-          CANDIDATOS=(
-            ../../*[wW][eE][bB]-[aA][gG][eE][nN][tT]*.[tT][aA][rR].[gG][zZ]
-            "${{ github.workspace }}/../"*[wW][eE][bB]-[aA][gG][eE][nN][tT]*.[tT][aA][rR].[gG][zZ]
-            /media/rodrigo/dados/docker-protheus-webagent/*[wW][eE][bB]-[aA][gG][eE][nN][tT]*.[tT][aA][rR].[gG][zZ]
+          DIRETORIOS=(
+            ../..
+            "${{ github.workspace }}/.."
+            /media/rodrigo/dados/docker-protheus-webagent
           )
 
           COPIADO=false
-          for ARQUIVO in "${CANDIDATOS[@]}"; do
-            if [ -f "$ARQUIVO" ]; then
-              echo "✅ Arquivo encontrado em: $ARQUIVO"
-              cp "$ARQUIVO" .
+          for DIR in "${DIRETORIOS[@]}"; do
+            ARQUIVOS=(
+              "$DIR"/*[wW][eE][bB]-[aA][gG][eE][nN][tT]*.[tT][aA][rR].[gG][zZ]
+              "$DIR"/*[wW][eE][bB]-[aA][gG][eE][nN][tT]*.[zZ][iI][pP]
+              "$DIR"/*[wW][eE][bB]-[aA][gG][eE][nN][tT]*.[dD][mM][gG]
+            )
+            if [ ${#ARQUIVOS[@]} -gt 0 ]; then
+              echo "✅ Encontrados ${#ARQUIVOS[@]} arquivo(s) em: $DIR"
+              for ARQUIVO in "${ARQUIVOS[@]}"; do
+                echo "   - $(basename "$ARQUIVO")"
+                cp "$ARQUIVO" .
+              done
               COPIADO=true
               break
             fi
           done
 
           if [ "$COPIADO" = false ]; then
-            echo "❌ ERRO: O arquivo compactado do WebAgent não foi localizado em nenhum dos diretórios mapeados!"
-            echo "Certifique-se de que o arquivo (.TAR.GZ) está em /media/rodrigo/dados/docker-protheus-webagent/ ou no nível acima do projeto."
+            echo "❌ ERRO: Nenhum arquivo do WebAgent foi localizado em nenhum dos diretórios mapeados!"
+            echo "Certifique-se de que pelo menos um pacote (.TAR.GZ/.ZIP/.DMG) está em /media/rodrigo/dados/docker-protheus-webagent/ ou no nível acima do projeto."
             exit 1
+          fi
+
+          if ! ls ./*[wW][eE][bB]-[aA][gG][eE][nN][tT]*.[tT][aA][rR].[gG][zZ] >/dev/null 2>&1; then
+            echo "⚠️  Aviso: nenhum .TAR.GZ (Linux) encontrado -- a build mínima esperada não está presente."
           fi
 
       - name: Log in to Docker Hub
