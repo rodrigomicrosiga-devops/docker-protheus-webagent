@@ -115,7 +115,7 @@ Esta imagem é construída pelo workflow central **`Build image`** do repositór
 2. `scripts/stage-image.sh <release> <imagem> <dir>` copia esses arquivos para um contexto limpo, **conferindo tamanho e sha256 antes e depois da cópia**; qualquer divergência aborta o build.
 3. O workflow acrescenta o `Dockerfile` e o `entrypoint.sh` deste repositório e roda `docker build --build-arg WEBAGENT_VERSION=<versão do manifesto>`. Só publica com `push=true` e **recusa uma tag que já exista** no Docker Hub.
 
-* **Tag:** a versão do WebAgent (ex.: `1.1.2`). Se o conteúdo de uma versão já publicada precisar mudar, sai como `<versão>-r2` (a tag original nunca é sobrescrita).
+* **Tag:** a versão do WebAgent (ex.: `1.1.2`), sem sufixo de revisão.
 * **Build-arg:** `WEBAGENT_VERSION` (obrigatório, sem valor padrão).
 * Os pacotes oficiais da TOTVS não são versionados aqui (`.gitignore`).
 
