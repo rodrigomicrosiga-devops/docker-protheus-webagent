@@ -106,3 +106,18 @@ Downloads TOTVS usa hoje (`.tar.gz`, `.zip`, `.dmg`) já são tratados dinamicam
 
 Toda imagem publicada carrega o label `org.opencontainers.image.revision` com o SHA do commit
 que originou o build, seguindo a convenção padronizada em toda a frota.
+
+## 🏭 Build e publicação
+
+Esta imagem é construída pelo workflow central **`Build image`** do repositório privado `protheus-catalog` — este repositório não tem workflow de publicação, e um push aqui **não** publica nada.
+
+1. O catálogo guarda, por release, um manifesto (`releases/<release>/manifest.yaml`) com o caminho, o tamanho e o sha256 de cada arquivo oficial da TOTVS que compõe a imagem.
+2. `scripts/stage-image.sh <release> <imagem> <dir>` copia esses arquivos para um contexto limpo, **conferindo tamanho e sha256 antes e depois da cópia**; qualquer divergência aborta o build.
+3. O workflow acrescenta o `Dockerfile` e o `entrypoint.sh` deste repositório e roda `docker build --build-arg WEBAGENT_VERSION=<versão do manifesto>`. Só publica com `push=true` e **recusa uma tag que já exista** no Docker Hub.
+
+* **Tag:** a versão do WebAgent (ex.: `1.1.2`). Se o conteúdo de uma versão já publicada precisar mudar, sai como `<versão>-r2` (a tag original nunca é sobrescrita).
+* **Build-arg:** `WEBAGENT_VERSION` (obrigatório, sem valor padrão).
+* Os pacotes oficiais da TOTVS não são versionados aqui (`.gitignore`).
+
+O formato de cada pacote é detectado pelo **conteúdo**, não pela extensão: o instalador MSI da `1.1.2` vem da TOTVS como um MSI cru com extensão `.ZIP` (na `1.1.1` era um zip de verdade). Formato desconhecido derruba o build. A imagem entrega, para a `1.1.2`: `.deb`/`.rpm` (Linux x64), `setup.exe` e `.msi` (Windows x64 e x86) e os 2 `.dmg` (macOS).
+
