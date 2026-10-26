@@ -7,19 +7,27 @@ RUN apk add --no-cache tar unzip
 
 WORKDIR /tmp/build
 
-# Suporte dinâmico: copia todos os pacotes com tolerância de caixa no nome
-# (mesmo padrão de docker-protheus-webapp) -- três formatos de arquivo
-# possíveis (Linux vem em .tar.gz, Windows em .zip, macOS em .dmg direto),
-# pra cada SO/arquitetura que a Central de Downloads TOTVS oferece pra esta
-# versão. Falta um pacote? Sem problema -- o `find` abaixo só processa o que
-# existir de fato, e o entrypoint.sh já entrega qualquer arquivo presente
-# sem exigir nome fixo.
+# Todos os pacotes web-agent* do contexto entram em raw/ (tolerando caixa no nome). O formato é
+# detectado pelo CONTEÚDO, não pela extensão: a TOTVS já entregou o instalador MSI da 1.1.2 como um
+# arquivo MSI cru com extensão .ZIP (na 1.1.1 era um zip de verdade). Formato desconhecido ou
+# erro de extração derruba o build (nada de `find -exec`, que devolve 0 mesmo quando o comando falha).
+ARG WEBAGENT_VERSION
 COPY ./*[wW][eE][bB]-[aA][gG][eE][nN][tT]*.[tT][aA][rR].[gG][zZ] ./*[wW][eE][bB]-[aA][gG][eE][nN][tT]*.[zZ][iI][pP] ./*[wW][eE][bB]-[aA][gG][eE][nN][tT]*.[dD][mM][gG] ./raw/
 
-RUN mkdir -p webagent && \
-    find raw -iname '*.tar.gz' -exec sh -c 'tar -xzf "$1" -C webagent/' _ {} \; && \
-    find raw -iname '*.zip' -exec sh -c 'unzip -oq "$1" -d webagent/' _ {} \; && \
-    find raw -iname '*.dmg' -exec cp {} webagent/ \;
+RUN set -e; mkdir -p webagent; \
+    for f in raw/*; do \
+      b="$(basename "$f")"; \
+      magic="$(head -c 4 "$f" | od -An -tx1 | tr -d ' \n')"; \
+      case "$magic" in \
+        1f8b*)    tar -xzf "$f" -C webagent/ ;; \
+        504b0304) unzip -oq "$f" -d webagent/ ;; \
+        d0cf11e0) arch="$(echo "$b" | sed -E 's/.*_WINDOWS_(X64|X86)\..*/\1/' | tr 'A-Z' 'a-z')"; \
+                  case "$arch" in x64|x86) ;; *) echo "ERRO: arquitetura do MSI não identificada em $b" >&2; exit 1 ;; esac; \
+                  cp "$f" "webagent/web-agent-${WEBAGENT_VERSION}-windows-${arch}-release.msi" ;; \
+        *)        case "$b" in *.[dD][mM][gG]) cp "$f" webagent/ ;; *) echo "ERRO: formato desconhecido: $b" >&2; exit 1 ;; esac ;; \
+      esac; \
+    done; \
+    test -f "webagent/web-agent-${WEBAGENT_VERSION}-linux-x64-release.deb" || { echo "ERRO: .deb Linux x64 ausente" >&2; exit 1; }
 
 # ==============================================================================
 # ESTÁGIO 2: Runner (imagem enxuta de entrega)
