@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-echo "📦 [WebAgent Delivery] Inicializando provisionamento dos instaladores v1.1.1 (Linux x64)..."
+echo "📦 [WebAgent Delivery] Inicializando provisionamento dos instaladores v${WEBAGENT_VERSION:-?} (Linux x64)..."
 
 TARGET_DIR="/mnt/webagent_shared"
 

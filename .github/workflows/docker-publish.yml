@@ -1,13 +1,10 @@
 name: Docker Build & Push WebAgent to Docker Hub
 
+# Só manual: o push NÃO publica mais. O Image Updater acompanha esta tag por digest,
+# então um push que sobrescrevesse webagent-dev:1.1.1 trocaria o webagent da produção.
+# Novas versões saem pelo construtor central do protheus-catalog (tag nova, nunca sobrescrita).
 on:
-  push:
-    branches:
-      - main
-      - develop
-    paths-ignore:
-      - 'README.md'
-      - '.gitignore'
+  workflow_dispatch:
 
 jobs:
   build-and-push:
@@ -77,6 +74,8 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
+          build-args: |
+            WEBAGENT_VERSION=1.1.1
           tags: rodrigomicrosiga/webagent-dev:1.1.1
           labels: |
             org.opencontainers.image.revision=${{ github.sha }}

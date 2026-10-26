@@ -25,8 +25,13 @@ RUN mkdir -p webagent && \
 # ESTÁGIO 2: Runner (imagem enxuta de entrega)
 # ==============================================================================
 FROM alpine:3.19 AS runner
+# Versão do pacote (ex.: 1.1.2): vem do construtor (build-arg), sem valor padrão
+# para não rotular uma imagem com a versão errada.
+ARG WEBAGENT_VERSION
+RUN test -n "${WEBAGENT_VERSION}" || { echo "ERRO: passe --build-arg WEBAGENT_VERSION=<versão>" >&2; exit 1; }
+ENV WEBAGENT_VERSION=${WEBAGENT_VERSION}
 LABEL maintainer="Rodrigo dos Santos Brandão <rodrigomicrosiga>" \
-      version="1.1.1" \
+      version="${WEBAGENT_VERSION}" \
       description="TOTVS Protheus SmartClient WebAgent (Windows/macOS/Linux) - Delivery Container"
 
 # Usuário não-root: este container só extrai os instaladores pro volume
@@ -49,6 +54,6 @@ USER webagent
 # mínimo de saúde. O entrypoint não falha (só avisa) se algum formato
 # individual não estiver presente.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
-    CMD test -f /mnt/webagent_shared/web-agent-1.1.1-linux-x64-release.deb
+    CMD test -f /mnt/webagent_shared/web-agent-${WEBAGENT_VERSION}-linux-x64-release.deb
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
